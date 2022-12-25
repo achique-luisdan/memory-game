@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego de Memoria</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <main id="app">
+  </main>
+  <script>
+    const app = Vue.createApp({
+      data() {
+        return {
+          quantity: 28,
+          cards: [
+
+          ]
+        }
+      },
+      methods: {
+        uuid() {
+          var dt = new Date().getTime();
+          var uuid = 'dddddd'.replace(/[ddd]/g, function (c) {
+            var r = (dt + Math.random() * 16) % 16 | 0;
+            dt = Math.floor(dt / 16);
+            return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          });
+          return uuid;
+        },
+        randomNum(max) {
+          const num = Math.floor(Math.random() * max);
+          return num;
+        },
+
+        isPair (num)  {
+          return num % 2 === 0;
+        },
+
+        putCards() {
+          for (let i = 0; i < this.quantity; i++) {
+            let card = {
+              id: this.uuid(),
+              status: false,
+              face: false,
+              couple: null,
+              figure: null,
+            }
+            let index;
+            do {
+              index = this.cards.findIndex(cardElement => {
+                return cardElement.id === card.id;
+              })
+              card.id = this.uuid()
+            } while (index > -1);
+            this.cards.push(card);
+          }
+        },
+        pairCards() {
+          let pairedCards = Array(0);
+          let count = 0;
+          this.cards.forEach((card, index) => {
+            if (this.isPair(index)){
+              let cardOne = card;
+              let cardTwo = this.cards[index + 1];
+              cardOne.couple = cardTwo.id
+              cardTwo.couple = cardOne.id
+              cardOne.figure = `${count+1}.png`;
+              cardTwo.figure = `${count+1}.png`;
+              count++
+              pairedCards.push(cardOne);
+              pairedCards.push(cardTwo);
+            }
+          });
+          pairedCards.sort(function() { return Math.random() - 0.5 });
+          pairedCards.sort(function() { return Math.random() - 0.5 });
+          pairedCards.sort(function() { return Math.random() - 0.5 });
+          this.cards = pairedCards;
+        },
+        down(){
+          const myTimeout = window.setTimeout(()=> this.cards.map (card => {
+            card.face = false;
+            return card;
+          }), 2000);
+        },
+        take(cards){
+            const myTimeout = window.setTimeout(()=> this.cards.map (card => {
+            if(card.id === cards[0].id || card.id === cards[1].id){
+              card.status = true;
+            }
+            return card;
+          }), 1000);
+        }
+      },
+      template:
+        `
+          <v-board :cards="cards"  v-on:down="down()" v-on:take="take"></v-board>
+        `,
+      mounted() {
+        this.putCards();
+        this.pairCards();
+      }
+    });
+    app.component('v-card', {
+      props: {
+        card: Object
+      },
+      methods: {
+        up(){
+          if(!this.card.face){
+            this.card.face = !this.card.face;
+            this.$emit('up')
+          }
+        },
+        isTake (card){
+          return card.status ? 'take': ''
+        }
+      },
+      template:
+        `
+        <div :class="['card', isTake(card)]" v-on:click="up()">
+          <span v-if="card.face">
+            <img v-bind:src="'./imgs/' + card.figure">  
+          </span>
+        </div>
+      `
+    });
+    app.component('v-board', {
+      data(){
+        return {
+          turn: 0,
+          players: [ 
+            {
+              movements: 0,
+              cards: Array(0)
+            }
+          ]
+        }
+      },
+      props: {
+        cards: Array,
+      },
+      methods: {
+        isCouple(){
+          return this.players[this.turn].cards[0].id === this.players[this.turn].cards[1].couple;
+        },
+        up(card){
+          this.players[this.turn].movements++;
+          this.players[this.turn].cards.push (card);
+          if (this.players[this.turn].movements === 2){
+            this.players[this.turn].movements = 0;
+            const couple = this.isCouple();
+            if (couple){
+              this.$emit('take', this.players[this.turn].cards);
+              this.players[this.turn].cards = Array(0);      
+            }
+            else {
+              this.players[this.turn].cards = Array(0);         
+              this.$emit('down')
+            }
+          }
+        },
+      },
+      template:
+        `
+        <div class="board">
+          <v-card v-for="card in cards" :card="card" v-on:up="up(card)">
+          </v-card>
+        </div>
+      `
+    });
+    const vm = app.mount("#app");
+  </script>
+</body>
+
+</html>
