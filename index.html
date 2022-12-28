@@ -82,9 +82,11 @@
           pairedCards.sort(function() { return Math.random() - 0.5 });
           this.cards = pairedCards;
         },
-        down(){
+        down(cards){
           const myTimeout = window.setTimeout(()=> this.cards.map (card => {
-            card.face = false;
+            if(card.id === cards[0].id || card.id === cards[1].id){
+              card.face = false;
+            }
             return card;
           }), 2000);
         },
@@ -99,7 +101,7 @@
       },
       template:
         `
-          <v-board :cards="cards"  v-on:down="down()" v-on:take="take"></v-board>
+          <v-board :cards="cards"  v-on:down="down" v-on:take="take"></v-board>
         `,
       mounted() {
         this.putCards();
@@ -160,8 +162,8 @@
               this.players[this.turn].cards = Array(0);      
             }
             else {
+              this.$emit('down', this.players[this.turn].cards)
               this.players[this.turn].cards = Array(0);         
-              this.$emit('down')
             }
           }
         },
